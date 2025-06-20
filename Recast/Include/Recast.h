@@ -344,7 +344,13 @@ struct rcCompactSpan
 {
 	unsigned short y;			///< The lower extent of the span. (Measured from the heightfield's base.)
 	unsigned short reg;			///< The id of the region the span belongs to. (Or zero if not in a region.)
+	// 这里:后面表示指定多少bit，变量是一个 24 位的位域，
+	// 用于以压缩格式存储一个“span”（体素空间中的一个垂直柱体）的邻居连接信息。
+	// 一个 span 最多可以有 4 个邻居（东、南、西、北）。由于每个邻居索引需要 6 位来存储（最多 64 个不同的邻居索引）
+	// 因此总共需要 4 * 6 = 24 位来存储所有四个邻居的连接信息。
 	unsigned int con : 24;		///< Packed neighbor connection data.
+	// 意味着在 Recast 的设计中，单个“紧凑跨度”的最大高度不能超过 255 个体素单位
+	// 如果超过这个高度，Recast 会将这个跨度拆分成多个较短的跨度，以确保每个跨度的高度在合理范围内。
 	unsigned int h : 8;			///< The height of the span.  (Measured from #y.)
 };
 
