@@ -72,6 +72,7 @@ static bool pointInPoly(int numVerts, const float* verts, const float* point)
 	return inPoly;
 }
 
+/// 这个函数使用距离场算法来计算每个span到边界的距离，然后根据侵蚀半径过滤掉距离太近的span。
 bool rcErodeWalkableArea(rcContext* context, const int erosionRadius, rcCompactHeightfield& compactHeightfield)
 {
 	rcAssert(context != NULL);
@@ -89,9 +90,11 @@ bool rcErodeWalkableArea(rcContext* context, const int erosionRadius, rcCompactH
 		context->log(RC_LOG_ERROR, "erodeWalkableArea: Out of memory 'dist' (%d).", compactHeightfield.spanCount);
 		return false;
 	}
+	// 分配距离数组
 	memset(distanceToBoundary, 0xff, sizeof(unsigned char) * compactHeightfield.spanCount);
 	
 	// Mark boundary cells.
+	// 遍历每个cell，标记边界cell
 	for (int z = 0; z < zSize; ++z)
 	{
 		for (int x = 0; x < xSize; ++x)
@@ -99,6 +102,7 @@ bool rcErodeWalkableArea(rcContext* context, const int erosionRadius, rcCompactH
 			const rcCompactCell& cell = compactHeightfield.cells[x + z * zStride];
 			for (int spanIndex = (int)cell.index, maxSpanIndex = (int)(cell.index + cell.count); spanIndex < maxSpanIndex; ++spanIndex)
 			{
+				// 如果span不可行走，距离为0
 				if (compactHeightfield.areas[spanIndex] == RC_NULL_AREA)
 				{
 					distanceToBoundary[spanIndex] = 0;
@@ -107,6 +111,7 @@ bool rcErodeWalkableArea(rcContext* context, const int erosionRadius, rcCompactH
 				const rcCompactSpan& span = compactHeightfield.spans[spanIndex];
 
 				// Check that there is a non-null adjacent span in each of the 4 cardinal directions.
+				// 检查4个方向的邻居
 				int neighborCount = 0;
 				for (int direction = 0; direction < 4; ++direction)
 				{
@@ -128,6 +133,7 @@ bool rcErodeWalkableArea(rcContext* context, const int erosionRadius, rcCompactH
 				}
 				
 				// At least one missing neighbour, so this is a boundary cell.
+				// 如果邻居数量不足4个，说明是边界span
 				if (neighborCount != 4)
 				{
 					distanceToBoundary[spanIndex] = 0;
@@ -138,7 +144,8 @@ bool rcErodeWalkableArea(rcContext* context, const int erosionRadius, rcCompactH
 	
 	unsigned char newDistance;
 	
-	// Pass 1
+	// 距离场计算, 使用两次扫描算法来计算每个span到边界的最短距离：
+	// Pass 1, 第一次扫描（正向） 从左上角开始，向右下角扫描
 	for (int z = 0; z < zSize; ++z)
 	{
 		for (int x = 0; x < xSize; ++x)
@@ -205,7 +212,7 @@ bool rcErodeWalkableArea(rcContext* context, const int erosionRadius, rcCompactH
 		}
 	}
 
-	// Pass 2
+	// Pass 2, 第二次扫描（反向）：从右下角开始，向左上角扫描
 	for (int z = zSize - 1; z >= 0; --z)
 	{
 		for (int x = xSize - 1; x >= 0; --x)
@@ -272,6 +279,10 @@ bool rcErodeWalkableArea(rcContext* context, const int erosionRadius, rcCompactH
 		}
 	}
 
+	// 根据侵蚀半径过滤掉距离太近的span
+	// 侵蚀逻辑：
+	// 如果span到边界的距离 < erosionRadius * 2 → 标记为不可行走
+	// 为什么是 * 2？因为距离场使用2作为相邻span的距离单位
 	const unsigned char minBoundaryDistance = (unsigned char)(erosionRadius * 2);
 	for (int spanIndex = 0; spanIndex < compactHeightfield.spanCount; ++spanIndex)
 	{
@@ -429,6 +440,12 @@ void rcMarkBoxArea(rcContext* context, const float* boxMinBounds, const float* b
 	}
 }
 
+// 用于在导航网格中标记特定的凸多边形区域，为这些区域分配特定的区域ID（areaId）。
+// 1. 计算多边形的包围盒
+// 2. 转换为网格坐标
+// 3. 遍历包围盒内的所有span
+// 4. 使用射线法判断span是否在多边形内
+// 5. 如果在多边形内，标记为指定的areaId
 void rcMarkConvexPolyArea(rcContext* context, const float* verts, const int numVerts,
 						  const float minY, const float maxY, unsigned char areaId,
 						  rcCompactHeightfield& compactHeightfield)

@@ -506,6 +506,10 @@ bool Sample_SoloMesh::handleBuild()
 	}
 		
 	// Erode the walkable area by agent radius.
+	// 确保角色有足够的空间移动。具体来说：
+	// 模拟角色半径：考虑角色的实际大小，确保角色不会卡在墙壁或障碍物附近
+	// 创建安全边界：在可行走区域和不可行走区域之间创建缓冲区
+	// 提高路径质量：避免角色贴着墙壁或障碍物移动
 	if (!rcErodeWalkableArea(m_ctx, m_cfg.walkableRadius, *m_chf))
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not erode.");
@@ -513,6 +517,7 @@ bool Sample_SoloMesh::handleBuild()
 	}
 
 	// (Optional) Mark areas.
+	// 用于在导航网格中标记特定的凸多边形区域，为这些区域分配特定的区域ID（areaId）。
 	const ConvexVolume* vols = m_geom->getConvexVolumes();
 	for (int i  = 0; i < m_geom->getConvexVolumeCount(); ++i)
 		rcMarkConvexPolyArea(m_ctx, vols[i].verts, vols[i].nverts, vols[i].hmin, vols[i].hmax, (unsigned char)vols[i].area, *m_chf);

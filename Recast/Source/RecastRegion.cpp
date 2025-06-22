@@ -42,10 +42,11 @@ static void calculateDistanceField(rcCompactHeightfield& chf, unsigned short* sr
 	const int h = chf.height;
 	
 	// Init distance and points.
+	// 初始化距离数组，所有span的距离都设置为最大值
 	for (int i = 0; i < chf.spanCount; ++i)
 		src[i] = 0xffff;
 	
-	// Mark boundary cells.
+	// Mark boundary cells. 标记边界cell
 	for (int y = 0; y < h; ++y)
 	{
 		for (int x = 0; x < w; ++x)
@@ -56,6 +57,7 @@ static void calculateDistanceField(rcCompactHeightfield& chf, unsigned short* sr
 				const rcCompactSpan& s = chf.spans[i];
 				const unsigned char area = chf.areas[i];
 				
+				// 检查4个方向的邻居
 				int nc = 0;
 				for (int dir = 0; dir < 4; ++dir)
 				{
@@ -68,6 +70,7 @@ static void calculateDistanceField(rcCompactHeightfield& chf, unsigned short* sr
 							nc++;
 					}
 				}
+				// 如果邻居数量不足4个，说明是边界span
 				if (nc != 4)
 					src[i] = 0;
 			}
@@ -75,7 +78,7 @@ static void calculateDistanceField(rcCompactHeightfield& chf, unsigned short* sr
 	}
 	
 			
-	// Pass 1
+	// Pass 1, 第一次扫描（正向） 
 	for (int y = 0; y < h; ++y)
 	{
 		for (int x = 0; x < w; ++x)
@@ -92,6 +95,7 @@ static void calculateDistanceField(rcCompactHeightfield& chf, unsigned short* sr
 					const int ay = y + rcGetDirOffsetY(0);
 					const int ai = (int)chf.cells[ax+ay*w].index + rcGetCon(s, 0);
 					const rcCompactSpan& as = chf.spans[ai];
+					// 如果邻居的距离+2小于当前span的距离，则更新当前span的距离
 					if (src[ai]+2 < src[i])
 						src[i] = src[ai]+2;
 					
@@ -129,7 +133,7 @@ static void calculateDistanceField(rcCompactHeightfield& chf, unsigned short* sr
 		}
 	}
 	
-	// Pass 2
+	// Pass 2，第二次扫描（反向）
 	for (int y = h-1; y >= 0; --y)
 	{
 		for (int x = w-1; x >= 0; --x)
@@ -212,6 +216,7 @@ static unsigned short* boxBlur(rcCompactHeightfield& chf, int thr,
 					continue;
 				}
 
+				// 计算3x3邻域的平均值
 				int d = (int)cd;
 				for (int dir = 0; dir < 4; ++dir)
 				{
