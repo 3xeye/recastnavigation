@@ -341,6 +341,7 @@ void rcMarkWalkableTriangles(rcContext* context, const float walkableSlopeAngle,
 	rcIgnoreUnused(context);
 	rcIgnoreUnused(numVerts);
 
+    // 计算walkableSlopeAngle的阈值
 	const float walkableThr = cosf(walkableSlopeAngle / 180.0f * RC_PI);
 
 	float norm[3];
@@ -348,6 +349,7 @@ void rcMarkWalkableTriangles(rcContext* context, const float walkableSlopeAngle,
 	for (int i = 0; i < numTris; ++i)
 	{
 		const int* tri = &tris[i * 3];
+		// 计算三角形法向量
 		calcTriNormal(&verts[tri[0] * 3], &verts[tri[1] * 3], &verts[tri[2] * 3], norm);
 		// Check if the face is walkable.
 		if (norm[1] > walkableThr)
@@ -409,6 +411,7 @@ bool rcBuildCompactHeightfield(rcContext* context, const int walkableHeight, con
 
 	const int xSize = heightfield.width;
 	const int zSize = heightfield.height;
+	// 计算总span数量
 	const int spanCount = rcGetHeightFieldSpanCount(context, heightfield);
 
 	// Fill in header.
@@ -423,6 +426,7 @@ bool rcBuildCompactHeightfield(rcContext* context, const int walkableHeight, con
 	compactHeightfield.bmax[1] += walkableHeight * heightfield.ch;
 	compactHeightfield.cs = heightfield.cs;
 	compactHeightfield.ch = heightfield.ch;
+	// 分配cells空间
 	compactHeightfield.cells = (rcCompactCell*)rcAlloc(sizeof(rcCompactCell) * xSize * zSize, RC_ALLOC_PERM);
 	if (!compactHeightfield.cells)
 	{
@@ -430,6 +434,7 @@ bool rcBuildCompactHeightfield(rcContext* context, const int walkableHeight, con
 		return false;
 	}
 	memset(compactHeightfield.cells, 0, sizeof(rcCompactCell) * xSize * zSize);
+	// 分配紧凑数组
 	compactHeightfield.spans = (rcCompactSpan*)rcAlloc(sizeof(rcCompactSpan) * spanCount, RC_ALLOC_PERM);
 	if (!compactHeightfield.spans)
 	{
@@ -448,6 +453,7 @@ bool rcBuildCompactHeightfield(rcContext* context, const int walkableHeight, con
 	const int MAX_HEIGHT = 0xffff;
 
 	// Fill in cells and spans.
+	// 转换数据
 	int currentCellIndex = 0;
 	const int numColumns = xSize * zSize;
 	for (int columnIndex = 0; columnIndex < numColumns; ++columnIndex)
@@ -480,6 +486,7 @@ bool rcBuildCompactHeightfield(rcContext* context, const int walkableHeight, con
 	}
 	
 	// Find neighbour connections.
+	// 这里构建邻居连接，用于后续的距离场等数据的计算。
 	const int MAX_LAYERS = RC_NOT_CONNECTED - 1;
 	int maxLayerIndex = 0;
 	const int zStride = xSize; // for readability
@@ -492,9 +499,11 @@ bool rcBuildCompactHeightfield(rcContext* context, const int walkableHeight, con
 			{
 				rcCompactSpan& span = compactHeightfield.spans[i];
 
+				//	四个方向
 				for (int dir = 0; dir < 4; ++dir)
 				{
 					rcSetCon(span, dir, RC_NOT_CONNECTED);
+					// 获取邻居cell的坐标
 					const int neighborX = x + rcGetDirOffsetX(dir);
 					const int neighborZ = z + rcGetDirOffsetY(dir);
 					// First check that the neighbour cell is in bounds.
@@ -505,18 +514,22 @@ bool rcBuildCompactHeightfield(rcContext* context, const int walkableHeight, con
 
 					// Iterate over all neighbour spans and check if any of the is
 					// accessible from current cell.
+					// 检查邻居cell的所有span
 					const rcCompactCell& neighborCell = compactHeightfield.cells[neighborX + neighborZ * zStride];
 					for (int k = (int)neighborCell.index, nk = (int)(neighborCell.index + neighborCell.count); k < nk; ++k)
 					{
 						const rcCompactSpan& neighborSpan = compactHeightfield.spans[k];
+						// 计算重叠区域
 						const int bot = rcMax(span.y, neighborSpan.y);
 						const int top = rcMin(span.y + span.h, neighborSpan.y + neighborSpan.h);
 
 						// Check that the gap between the spans is walkable,
 						// and that the climb height between the gaps is not too high.
+						// 检查是否可走
 						if ((top - bot) >= walkableHeight && rcAbs((int)neighborSpan.y - (int)span.y) <= walkableClimb)
 						{
 							// Mark direction as walkable.
+							// 在con属性里标记这个方向上的联通信息
 							const int layerIndex = k - (int)neighborCell.index;
 							if (layerIndex < 0 || layerIndex > MAX_LAYERS)
 							{

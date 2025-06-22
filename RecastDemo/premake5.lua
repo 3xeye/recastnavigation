@@ -24,7 +24,6 @@ workspace "recastnavigation"
 	exceptionhandling "Off"
 	rtti "Off"
 	symbols "On"
-	flags { "FatalCompileWarnings" }
 	cppdialect "C++98"
 
 	-- debug configs
@@ -200,6 +199,9 @@ project "RecastDemo"
 			"SDL2.framework",
 			"Cocoa.framework",
 		}
+		-- Add compiler flags to ignore specific warnings for fastlz.c
+		filter { "system:macosx", "files:*.c" }
+			buildoptions { "-Wno-shorten-64-to-32", "-Wno-conversion", "-Wno-sign-conversion" }
 
 project "Tests"
 	language "C++"
