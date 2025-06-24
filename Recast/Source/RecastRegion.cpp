@@ -1613,6 +1613,7 @@ bool rcBuildRegions(rcContext* ctx, rcCompactHeightfield& chf,
 			rcScopedTimer timerExpand(ctx, RC_TIMER_BUILD_REGIONS_EXPAND);
 
 			// Expand current regions until no empty connected cells found.
+			// 如果有和已标记区域相邻的cell，就扩展
 			expandRegions(expandIters, level, chf, srcReg, srcDist, lvlStacks[sId], false);
 		}
 		
@@ -1620,6 +1621,7 @@ bool rcBuildRegions(rcContext* ctx, rcCompactHeightfield& chf,
 			rcScopedTimer timerFloor(ctx, RC_TIMER_BUILD_REGIONS_FLOOD);
 
 			// Mark new regions with IDs.
+			// 没有分配的孤立span，是新的区域，分配新的regionId
 			for (int j = 0; j<lvlStacks[sId].size(); j++)
 			{
 				LevelStackEntry current = lvlStacks[sId][j];
@@ -1654,6 +1656,7 @@ bool rcBuildRegions(rcContext* ctx, rcCompactHeightfield& chf,
 		// Merge regions and filter out small regions.
 		rcTempVector<int> overlaps;
 		chf.maxRegions = regionId;
+		// 合并小区域，过滤掉面积太小的孤岛，保证每个region都足够大且连通。
 		if (!mergeAndFilterRegions(ctx, minRegionArea, mergeRegionArea, chf.maxRegions, chf, srcReg, overlaps))
 			return false;
 
